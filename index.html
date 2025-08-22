@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infinitab - The Infinite Website Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            transition: all 0.5s ease;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.2em;
+            color: #667eea;
+        }
+
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        .website-content {
+            padding: 20px;
+            min-height: 400px;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .nav-button {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .nav-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .breadcrumb {
+            padding: 15px;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .breadcrumb-item {
+            color: #667eea;
+            cursor: pointer;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .breadcrumb-item:hover {
+            color: #764ba2;
+        }
+
+        .breadcrumb-separator {
+            color: #999;
+        }
+
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .initial-screen {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .initial-screen h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 2em;
+        }
+
+        .initial-screen p {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+            line-height: 1.6;
+        }
+
+        .generate-button {
+            padding: 16px 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1.2em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .generate-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(102, 126, 234, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌐 Infinitab</h1>
+            <p>The Infinite Website Generator - Click any button to explore new AI-generated worlds!</p>
+        </div>
+        
+        <div id="breadcrumb" class="breadcrumb" style="display: none;">
+            <span class="breadcrumb-item" onclick="goHome()">Home</span>
+        </div>
+        
+        <div id="content" class="website-content">
+            <div class="initial-screen">
+                <h2>Welcome to Infinitab!</h2>
+                <p>
+                    Click the button below to generate your first website.<br>
+                    Each website will have buttons that lead to new, themed websites.<br>
+                    Explore infinitely generated content powered by AI!
+                </p>
+                <button class="generate-button" onclick="generateFirstWebsite()">
+                    🚀 Generate Your First Website
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_KEY = 'sk-ab0b6c9216f94d2a949081040ee9d268';
+        const API_URL = 'https://api.deepseek.com/chat/completions';
+        
+        let navigationHistory = [];
+        let currentTheme = null;
+
+        async function callDeepSeek(prompt) {
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: 'deepseek-chat',
+                        messages: [
+                            {
+                                role: 'system',
+                                content: 'You are a creative website generator. Generate HTML content for websites with specific themes. Include multiple clickable elements that represent navigation to sub-pages. Format your response as valid HTML that can be directly inserted into a page. Make it visually appealing with inline styles.'
+                            },
+                            {
+                                role: 'user',
+                                content: prompt
+                            }
+                        ],
+                        temperature: 0.9,
+                        max_tokens: 2000
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API request failed: ${response.status}`);
+                }
+
+                const data = await response.json();
+                return data.choices[0].message.content;
+            } catch (error) {
+                console.error('DeepSeek API Error:', error);
+                throw error;
+            }
+        }
+
+        async function generateFirstWebsite() {
+            const contentDiv = document.getElementById('content');
+            contentDiv.innerHTML = '<div class="loading">Generating your website</div>';
+            
+            try {
+                const prompt = `Generate a complete website homepage about one of these random themes: 
+                - A futuristic space station
+                - An underwater city
+                - A magical library
+                - A cyberpunk marketplace
+                - An ancient temple
+                - A cloud kingdom
+                
+                Include:
+                1. A compelling title and description
+                2. At least 4-6 navigation buttons/links with descriptive text (like "Explore the Engine Room", "Visit the Observatory", etc.)
+                3. Some interesting content paragraphs
+                4. Use inline CSS for attractive styling
+                5. Make each button have onclick="navigateToSubpage('button_name', 'description')" where button_name is unique and description explains where it leads
+                
+                Make it visually appealing and immersive!`;
+
+                const htmlContent = await callDeepSeek(prompt);
+                
+                // Extract theme from the generated content (simplified approach)
+                const themes = ['space station', 'underwater city', 'magical library', 'cyberpunk marketplace', 'ancient temple', 'cloud kingdom'];
+                currentTheme = themes[Math.floor(Math.random() * themes.length)];
+                
+                navigationHistory = [{
+                    title: 'Home',
+                    content: htmlContent,
+                    theme: currentTheme
+                }];
+                
+                displayWebsite(htmlContent);
+                document.getElementById('breadcrumb').style.display = 'flex';
+                updateBreadcrumb();
+                
+                // Update background based on theme
+                updateThemeColors();
+            } catch (error) {
+                contentDiv.innerHTML = `
+                    <div class="error">
+                        <h3>Oops! Something went wrong.</h3>
+                        <p>${error.message}</p>
+                        <p>Please try again in a moment.</p>
+                        <button class="nav-button" onclick="generateFirstWebsite()">Try Again</button>
+                    </div>
+                `;
+            }
+        }
+
+        async function navigateToSubpage(pageName, description) {
+            const contentDiv = document.getElementById('content');
+            contentDiv.innerHTML = '<div class="loading">Traveling to new dimension</div>';
+            
+            try {
+                const prompt = `Generate a subpage for a ${currentTheme} website.
+                This is the "${pageName}" section which is described as: "${description}"
+                
+                Create content that:
+                1. Fits thematically with a ${currentTheme}
+                2. Has a clear title about ${pageName}
+                3. Includes detailed, immersive content about this specific area/section
+                4. Has 3-5 more navigation buttons to explore deeper (with onclick="navigateToSubpage('unique_name', 'description')")
+                5. Maintains visual consistency with the theme
+                6. Uses inline CSS for styling
+                
+                Make it feel like a real location within the ${currentTheme}!`;
+
+                const htmlContent = await callDeepSeek(prompt);
+                
+                navigationHistory.push({
+                    title: pageName,
+                    content: htmlContent,
+                    theme: currentTheme
+                });
+                
+                displayWebsite(htmlContent);
+                updateBreadcrumb();
+                
+                // Slightly vary the theme colors for subpages
+                updateThemeColors(navigationHistory.length);
+            } catch (error) {
+                contentDiv.innerHTML = `
+                    <div class="error">
+                        <h3>Navigation failed!</h3>
+                        <p>${error.message}</p>
+                        <button class="nav-button" onclick="goBack()">Go Back</button>
+                    </div>
+                `;
+            }
+        }
+
+        function displayWebsite(htmlContent) {
+            const contentDiv = document.getElementById('content');
+            
+            // Wrap the content to ensure our navigation function works
+            const wrappedContent = `
+                <div class="generated-website">
+                    ${htmlContent}
+                </div>
+                <div class="nav-buttons">
+                    <button class="nav-button" onclick="goBack()" ${navigationHistory.length <= 1 ? 'style="display:none"' : ''}>
+                        ← Go Back
+                    </button>
+                    <button class="nav-button" onclick="generateFirstWebsite()">
+                        🎲 Generate New World
+                    </button>
+                </div>
+            `;
+            
+            contentDiv.innerHTML = wrappedContent;
+        }
+
+        function updateBreadcrumb() {
+            const breadcrumb = document.getElementById('breadcrumb');
+            let breadcrumbHTML = '<span class="breadcrumb-item" onclick="goHome()">Home</span>';
+            
+            for (let i = 1; i < navigationHistory.length; i++) {
+                breadcrumbHTML += ' <span class="breadcrumb-separator">→</span> ';
+                breadcrumbHTML += `<span class="breadcrumb-item" onclick="goToHistory(${i})">${navigationHistory[i].title}</span>`;
+            }
+            
+            breadcrumb.innerHTML = breadcrumbHTML;
+        }
+
+        function goBack() {
+            if (navigationHistory.length > 1) {
+                navigationHistory.pop();
+                const previous = navigationHistory[navigationHistory.length - 1];
+                displayWebsite(previous.content);
+                updateBreadcrumb();
+                updateThemeColors(navigationHistory.length);
+            }
+        }
+
+        function goHome() {
+            if (navigationHistory.length > 0) {
+                const home = navigationHistory[0];
+                navigationHistory = [home];
+                displayWebsite(home.content);
+                updateBreadcrumb();
+                updateThemeColors(0);
+            }
+        }
+
+        function goToHistory(index) {
+            if (index < navigationHistory.length) {
+                navigationHistory = navigationHistory.slice(0, index + 1);
+                const target = navigationHistory[index];
+                displayWebsite(target.content);
+                updateBreadcrumb();
+                updateThemeColors(index);
+            }
+        }
+
+        function updateThemeColors(depth = 0) {
+            const hueShift = (depth * 30) % 360;
+            const gradient = `linear-gradient(${135 + hueShift}deg, 
+                hsl(${230 + hueShift}, 70%, 60%) 0%, 
+                hsl(${280 + hueShift}, 50%, 50%) 100%)`;
+            document.body.style.background = gradient;
+        }
+    </script>
+</body>
+</html>
