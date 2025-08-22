@@ -171,6 +171,26 @@
             transform: translateY(-3px);
             box-shadow: 0 8px 30px rgba(102, 126, 234, 0.5);
         }
+
+        .generated-website {
+            animation: fadeIn 0.5s ease;
+        }
+
+        .generated-button {
+            padding: 10px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .generated-button:hover {
+            background: #45a049;
+            transform: scale(1.05);
+        }
     </style>
 </head>
 <body>
@@ -201,7 +221,7 @@
 
     <script>
         const API_KEY = 'sk-ab0b6c9216f94d2a949081040ee9d268';
-        const API_URL = 'https://api.deepseek.com/chat/completions';
+        const API_URL = 'https://api.deepseek.com/v1/chat/completions';  // Fixed: Added /v1/
         
         let navigationHistory = [];
         let currentTheme = null;
@@ -215,27 +235,30 @@
                         'Authorization': `Bearer ${API_KEY}`
                     },
                     body: JSON.stringify({
-                        model: 'deepseek-chat',
+                        model: 'deepseek-reasoner',  // Fixed: Using correct model name
                         messages: [
                             {
                                 role: 'system',
-                                content: 'You are a creative website generator. Generate HTML content for websites with specific themes. Include multiple clickable elements that represent navigation to sub-pages. Format your response as valid HTML that can be directly inserted into a page. Make it visually appealing with inline styles.'
+                                content: 'You are a creative website content generator. Generate HTML content with inline styles. Always include multiple navigation buttons in your generated content.'
                             },
                             {
                                 role: 'user',
                                 content: prompt
                             }
                         ],
-                        temperature: 0.9,
-                        max_tokens: 2000
+                        temperature: 0.8,
+                        max_tokens: 1500,
+                        stream: True
                     })
                 });
 
+                const data = await response.json();
+                
                 if (!response.ok) {
-                    throw new Error(`API request failed: ${response.status}`);
+                    console.error('API Response:', data);
+                    throw new Error(`API request failed: ${response.status} - ${data.error?.message || 'Unknown error'}`);
                 }
 
-                const data = await response.json();
                 return data.choices[0].message.content;
             } catch (error) {
                 console.error('DeepSeek API Error:', error);
@@ -248,28 +271,29 @@
             contentDiv.innerHTML = '<div class="loading">Generating your website</div>';
             
             try {
-                const prompt = `Generate a complete website homepage about one of these random themes: 
-                - A futuristic space station
-                - An underwater city
-                - A magical library
-                - A cyberpunk marketplace
-                - An ancient temple
-                - A cloud kingdom
+                const themes = [
+                    'futuristic space station',
+                    'underwater city', 
+                    'magical library',
+                    'cyberpunk marketplace',
+                    'ancient temple',
+                    'cloud kingdom'
+                ];
                 
-                Include:
-                1. A compelling title and description
-                2. At least 4-6 navigation buttons/links with descriptive text (like "Explore the Engine Room", "Visit the Observatory", etc.)
-                3. Some interesting content paragraphs
-                4. Use inline CSS for attractive styling
-                5. Make each button have onclick="navigateToSubpage('button_name', 'description')" where button_name is unique and description explains where it leads
+                currentTheme = themes[Math.floor(Math.random() * themes.length)];
                 
-                Make it visually appealing and immersive!`;
+                const prompt = `Create HTML content for a ${currentTheme} themed website. Include:
+                1. A main heading with the theme
+                2. 2-3 paragraphs of descriptive content about this place
+                3. Create exactly 4-5 buttons that represent different areas to explore
+                4. Use inline styles to make it visually appealing
+                5. Each button should have this exact format: <button class="generated-button" onclick="navigateToSubpage('area_name', 'description')">Button Text</button>
+                
+                Example button: <button class="generated-button" onclick="navigateToSubpage('throne_room', 'The majestic throne room of the cloud kingdom')">Visit Throne Room</button>
+                
+                Make it immersive and interesting!`;
 
                 const htmlContent = await callDeepSeek(prompt);
-                
-                // Extract theme from the generated content (simplified approach)
-                const themes = ['space station', 'underwater city', 'magical library', 'cyberpunk marketplace', 'ancient temple', 'cloud kingdom'];
-                currentTheme = themes[Math.floor(Math.random() * themes.length)];
                 
                 navigationHistory = [{
                     title: 'Home',
@@ -280,15 +304,14 @@
                 displayWebsite(htmlContent);
                 document.getElementById('breadcrumb').style.display = 'flex';
                 updateBreadcrumb();
-                
-                // Update background based on theme
                 updateThemeColors();
+                
             } catch (error) {
                 contentDiv.innerHTML = `
                     <div class="error">
                         <h3>Oops! Something went wrong.</h3>
                         <p>${error.message}</p>
-                        <p>Please try again in a moment.</p>
+                        <p>Please check your API key and try again.</p>
                         <button class="nav-button" onclick="generateFirstWebsite()">Try Again</button>
                     </div>
                 `;
@@ -300,16 +323,16 @@
             contentDiv.innerHTML = '<div class="loading">Traveling to new dimension</div>';
             
             try {
-                const prompt = `Generate a subpage for a ${currentTheme} website.
-                This is the "${pageName}" section which is described as: "${description}"
+                const prompt = `Create HTML content for the "${pageName}" area of a ${currentTheme}. 
+                This area is described as: "${description}"
                 
-                Create content that:
-                1. Fits thematically with a ${currentTheme}
-                2. Has a clear title about ${pageName}
-                3. Includes detailed, immersive content about this specific area/section
-                4. Has 3-5 more navigation buttons to explore deeper (with onclick="navigateToSubpage('unique_name', 'description')")
-                5. Maintains visual consistency with the theme
-                6. Uses inline CSS for styling
+                Include:
+                1. A heading about this specific area
+                2. Detailed content (2-3 paragraphs) about this location
+                3. Create 3-4 new buttons to explore deeper areas
+                4. Each button format: <button class="generated-button" onclick="navigateToSubpage('unique_name', 'description')">Button Text</button>
+                5. Use inline styles for visual appeal
+                6. Keep the theme consistent with ${currentTheme}
                 
                 Make it feel like a real location within the ${currentTheme}!`;
 
@@ -323,9 +346,8 @@
                 
                 displayWebsite(htmlContent);
                 updateBreadcrumb();
-                
-                // Slightly vary the theme colors for subpages
                 updateThemeColors(navigationHistory.length);
+                
             } catch (error) {
                 contentDiv.innerHTML = `
                     <div class="error">
@@ -340,7 +362,6 @@
         function displayWebsite(htmlContent) {
             const contentDiv = document.getElementById('content');
             
-            // Wrap the content to ensure our navigation function works
             const wrappedContent = `
                 <div class="generated-website">
                     ${htmlContent}
